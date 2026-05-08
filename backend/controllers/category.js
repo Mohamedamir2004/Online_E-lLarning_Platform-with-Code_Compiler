@@ -1,4 +1,5 @@
 const Category = require('../models/category')
+const Course = require('../models/course')
 
 // get Random Integer
 function getRandomInt(max) {
@@ -19,13 +20,23 @@ exports.createCategory = async (req, res) => {
             });
         }
 
+        // prevent duplicates
+        const existing = await Category.findOne({ name });
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                message: 'Category already exists'
+            });
+        }
+
         const categoryDetails = await Category.create({
             name: name, description: description
         });
 
         res.status(200).json({
             success: true,
-            message: 'Category created successfully'
+            message: 'Category created successfully',
+            data: categoryDetails
         });
     }
     catch (error) {
@@ -64,6 +75,41 @@ exports.showAllCategories = async (req, res) => {
 }
 
 
+
+// ================ delete Category (and associated courses) ================
+exports.deleteCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.body;
+        if (!categoryId) {
+            return res.status(400).json({ success: false, message: 'categoryId is required' });
+        }
+
+        // remove courses of this category
+        const coursesToRemove = await Course.find({ category: categoryId }, { _id: 1 });
+        const courseIds = coursesToRemove.map(c => c._id);
+
+        // delete associated course progression
+        const CourseProgress = require('../models/courseProgress');
+        const User = require('../models/user');
+        if (courseIds.length > 0) {
+            await CourseProgress.deleteMany({ courseID: { $in: courseIds } });
+            // remove course references from users
+            await User.updateMany(
+                { courses: { $in: courseIds } },
+                { $pull: { courses: { $in: courseIds } } }
+            );
+        }
+        await Course.deleteMany({ category: categoryId });
+
+        // remove category itself
+        await Category.findByIdAndDelete(categoryId);
+
+        res.status(200).json({ success: true, message: 'Category and related courses deleted successfully' });
+    } catch (error) {
+        console.log('Error while deleting category', error);
+        res.status(500).json({ success: false, message: 'Error while deleting category', error: error.message });
+    }
+}
 
 // ================ Get Category Page Details ================
 exports.getCategoryPageDetails = async (req, res) => {

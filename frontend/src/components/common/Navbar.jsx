@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link, matchPath, useLocation } from 'react-router-dom'
+import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 
 import { NavbarLinks } from "../../../data/navbar-links"
@@ -22,8 +22,11 @@ const Navbar = () => {
     // console.log('USER data from Navbar (store) = ', user)
     const { totalItems } = useSelector((state) => state.cart)
     const location = useLocation();
+    const navigate = useNavigate();
 
     const [subLinks, setSubLinks] = useState([]);
+
+    const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
 
 
@@ -92,6 +95,49 @@ const Navbar = () => {
                     <img src={studyNotionLogo} width={160} height={42} loading='lazy' />
                 </Link>
 
+                {/* Search bar (desktop/tablet) */}
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        if (searchTerm.trim().length) {
+                            navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+                            setSearchTerm("");
+                        }
+                    }}
+                    className="hidden sm:flex items-center"
+                >
+                    <div className="relative flex items-center">
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search courses"
+                            className="form-style w-[200px] h-10 pr-10 pl-2 rounded-md bg-richblack-700 text-richblack-5 focus:outline-none focus:ring-2 focus:ring-yellow-50"
+                            aria-label="Search courses"
+                        />
+                        <button
+                            type="submit"
+                            className="absolute right-2 h-6 w-6 flex items-center justify-center text-richblack-400 hover:text-yellow-50 focus:outline-none"
+                            disabled={!searchTerm.trim().length}
+                            aria-label="Search courses"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                                stroke="currentColor"
+                                className="h-5 w-5"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18.5a7.5 7.5 0 006.15-3.85z"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
                 {/* Nav Links - visible for only large devices*/}
                 <ul className='hidden sm:flex gap-x-6 text-richblack-25'>
                     {
@@ -116,18 +162,23 @@ const Navbar = () => {
                                                 {loading ? (<p className="text-center ">Loading...</p>)
                                                     : subLinks.length ? (
                                                         <>
-                                                            {subLinks?.map((subLink, i) => (
-                                                                <Link
-                                                                    to={`/catalog/${subLink.name
-                                                                        .split(" ")
-                                                                        .join("-")
-                                                                        .toLowerCase()}`}
-                                                                    className="rounded-lg bg-transparent py-4 pl-4 hover:bg-richblack-50"
-                                                                    key={i}
-                                                                >
-                                                                    <p>{subLink.name}</p>
-                                                                </Link>
-                                                            ))}
+                                                            {subLinks?.map((subLink, i) => {
+                                                                const formattedName = subLink.name
+                                                                    .toLowerCase()
+                                                                    .replace(/\s+/g, "-")
+                                                                    .replace(/\//g, "-")
+                                                                    .replace(/[^a-z0-9-]/g, "");
+
+                                                                return (
+                                                                    <Link
+                                                                        to={`/catalog/${formattedName}`}
+                                                                        className="rounded-lg bg-transparent py-4 pl-4 hover:bg-richblack-50"
+                                                                        key={i}
+                                                                    >
+                                                                        <p>{subLink.name}</p>
+                                                                    </Link>
+                                                                )
+                                                            })}
                                                         </>
                                                     ) : (
                                                         <p className="text-center">No Courses Found</p>

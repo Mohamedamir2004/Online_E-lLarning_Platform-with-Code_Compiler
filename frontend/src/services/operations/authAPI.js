@@ -46,7 +46,7 @@ export function sendOtp(email, navigate) {
 }
 
 // ================ sign Up ================
-export function signUp(accountType, firstName, lastName, email, password, confirmPassword, otp, navigate) {
+export function signUp(accountType, firstName, lastName, email, password, confirmPassword, navigate) {
   return async (dispatch) => {
 
     const toastId = toast.loading("Loading...");
@@ -59,7 +59,6 @@ export function signUp(accountType, firstName, lastName, email, password, confir
         email,
         password,
         confirmPassword,
-        otp,
       })
 
       // console.log("SIGNUP API RESPONSE --> ", response);
@@ -72,9 +71,7 @@ export function signUp(accountType, firstName, lastName, email, password, confir
       navigate("/login");
     } catch (error) {
       console.log("SIGNUP API ERROR --> ", error);
-      // toast.error(error.response.data.message);
-      toast.error("Invalid OTP");
-      // navigate("/signup")
+      toast.error(error.response?.data?.message || "Signup failed");
     }
     dispatch(setLoading(false))
     toast.dismiss(toastId)

@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Route, Routes, useLocation, Link } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 import Home from "./pages/Home"
@@ -8,12 +8,12 @@ import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
-import VerifyEmail from "./pages/VerifyEmail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import PageNotFound from "./pages/PageNotFound";
 import CourseDetails from './pages/CourseDetails';
 import Catalog from './pages/Catalog';
+import SearchResults from './pages/SearchResults';
  
 import Navbar from "./components/common/Navbar"
 
@@ -31,6 +31,8 @@ import Instructor from './components/core/Dashboard/Instructor';
 import Cart from "./components/core/Dashboard/Cart/Cart";
 import EnrolledCourses from "./components/core/Dashboard/EnrolledCourses";
 import AddCourse from "./components/core/Dashboard/AddCourse/AddCourse";
+import PurchaseHistory from "./components/core/Dashboard/PurchaseHistory";
+import JsCompiler from "./components/core/Dashboard/JsCompiler";
 
 import ViewCourse from "./pages/ViewCourse";
 import VideoDetails from './components/core/ViewCourse/VideoDetails';
@@ -91,6 +93,7 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/about" element={<About />} />
         <Route path="catalog/:catalogName" element={<Catalog />} />
+        <Route path="/search" element={<SearchResults />} />
         <Route path="courses/:courseId" element={<CourseDetails />} />
 
         {/* Open Route - for Only Non Logged in User */}
@@ -114,14 +117,6 @@ function App() {
           path="forgot-password" element={
             <OpenRoute>
               <ForgotPassword />
-            </OpenRoute>
-          }
-        />
-
-        <Route
-          path="verify-email" element={
-            <OpenRoute>
-              <VerifyEmail />
             </OpenRoute>
           }
         />
@@ -154,6 +149,8 @@ function App() {
             <>
               <Route path="dashboard/cart" element={<Cart />} />
               <Route path="dashboard/enrolled-courses" element={<EnrolledCourses />} />
+              <Route path="dashboard/purchase-history" element={<PurchaseHistory />} />
+              <Route path="dashboard/js-compiler" element={<JsCompiler />} />
             </>
           )}
 

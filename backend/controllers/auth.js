@@ -53,7 +53,6 @@ exports.sendOTP = async (req, res) => {
         // return response successfully
         res.status(200).json({
             success: true,
-            otp,
             message: 'Otp sent successfully'
         });
     }
@@ -74,11 +73,13 @@ exports.signup = async (req, res) => {
     try {
         // extract data 
         const { firstName, lastName, email, password, confirmPassword,
-            accountType, contactNumber, otp } = req.body;
+            accountType, contactNumber } = req.body;
+
+        console.log('Signup request body:', req.body);
 
         // validation
-        if (!firstName || !lastName || !email || !password || !confirmPassword || !accountType || !otp) {
-            return res.status(401).json({
+        if (!firstName || !lastName || !email || !password || !confirmPassword || !accountType) {
+            return res.status(400).json({
                 success: false,
                 message: 'All fields are required..!'
             });
@@ -94,39 +95,18 @@ exports.signup = async (req, res) => {
 
         // check user have registered already
         const checkUserAlreadyExits = await User.findOne({ email });
+        console.log('User exists check:', checkUserAlreadyExits);
 
         // if yes ,then say to login
         if (checkUserAlreadyExits) {
+            console.log('User already exists, returning error');
             return res.status(400).json({
                 success: false,
                 message: 'User registered already, go to Login Page'
             });
         }
 
-        // find most recent otp stored for user in DB
-        const recentOtp = await OTP.findOne({ email }).sort({ createdAt: -1 }).limit(1);
-        // console.log('recentOtp ', recentOtp)
-
-        // .sort({ createdAt: -1 }): 
-        // It's used to sort the results based on the createdAt field in descending order (-1 means descending). 
-        // This way, the most recently created OTP will be returned first.
-
-        // .limit(1): It limits the number of documents returned to 1. 
-
-
-        // if otp not found
-        if (!recentOtp || recentOtp.length == 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Otp not found in DB, please try again'
-            });
-        } else if (otp !== recentOtp.otp) {
-            // otp invalid
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid Otp'
-            })
-        }
+        console.log('Creating user...');
 
         // hash - secure passoword
         let hashedPassword = await bcrypt.hash(password, 10);
@@ -137,7 +117,7 @@ exports.signup = async (req, res) => {
         });
 
         let approved = "";
-        approved === "Instructor" ? (approved = false) : (approved = true);
+        accountType === "Instructor" ? (approved = false) : (approved = true);
 
         // create entry in DB
         const userData = await User.create({
@@ -200,7 +180,7 @@ exports.login = async (req, res) => {
 
             // Generate token 
             const token = jwt.sign(payload, process.env.JWT_SECRET, {
-                expiresIn: "24h",
+                expiresIn: "7d",
             });
 
             user = user.toObject();

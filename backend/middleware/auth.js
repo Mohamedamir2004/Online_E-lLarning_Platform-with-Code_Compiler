@@ -7,9 +7,17 @@ require('dotenv').config();
 // ================ AUTH ================
 // user Authentication by checking token validating
 exports.auth = (req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        return next();
+    }
     try {
         // extract token by anyone from this 3 ways
         const token = req.body?.token || req.cookies?.token || req.header('Authorization')?.replace('Bearer ', '');
+
+        console.log('Extracted token:', token);
+        console.log('From body:', req.body?.token);
+        console.log('From cookies:', req.cookies?.token);
+        console.log('From header:', req.header('Authorization'));
 
         // if token is missing
         if (!token) {
@@ -26,17 +34,9 @@ exports.auth = (req, res, next) => {
 
         // verify token
         try {
+            console.log('JWT_SECRET:', process.env.JWT_SECRET);
             const decode = jwt.verify(token, process.env.JWT_SECRET);
-            // console.log('verified decode token => ', decode);
-            
-            // *********** example from console ***********
-            // verified decode token =>  {
-            //     email: 'buydavumli@biyac.com',
-            //     id: '650d6ae2914831142c702e4c',
-            //     accountType: 'Student',
-            //     iat: 1699452446,
-            //     exp: 1699538846
-            //   }
+            console.log('Decoded token:', decode);
             req.user = decode;
         }
         catch (error) {
@@ -93,7 +93,7 @@ exports.isStudent = (req, res, next) => {
 // ================ IS INSTRUCTOR ================
 exports.isInstructor = (req, res, next) => {
     try {
-        // console.log('User data -> ', req.user)
+        console.log('User data in isInstructor -> ', req.user)
         if (req.user?.accountType != 'Instructor') {
             return res.status(401).json({
                 success: false,
@@ -135,6 +135,27 @@ exports.isAdmin = (req, res, next) => {
             success: false,
             error: error.message,
             messgae: 'Error while cheching user validity with Admin accountType'
+        })
+    }
+}
+
+// ================ IS ADMIN OR INSTRUCTOR ================
+exports.isAdminOrInstructor = (req, res, next) => {
+    try {
+        if (req.user?.accountType !== 'Admin' && req.user?.accountType !== 'Instructor') {
+            return res.status(401).json({
+                success: false,
+                messgae: 'This Page is protected only for Admin or Instructor'
+            })
+        }
+        next();
+    } catch (error) {
+        console.log('Error while checking user validity for Admin/Instructor');
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+            messgae: 'Error while checking user validity for Admin/Instructor'
         })
     }
 }

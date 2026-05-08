@@ -162,14 +162,20 @@ exports.updateUserProfileImage = async (req, res) => {
         // console.log('profileImage = ', profileImage)
 
         // upload imga eto cloudinary
-        const image = await uploadImageToCloudinary(profileImage,
-            process.env.FOLDER_NAME, 1000, 1000);
+        let imageUrl = `https://api.dicebear.com/5.x/initials/svg?seed=${userId}`; // Default avatar
+        try {
+            const image = await uploadImageToCloudinary(profileImage,
+                process.env.FOLDER_NAME, 1000, 1000);
+            if (image && image.secure_url) {
+                imageUrl = image.secure_url;
+            }
+        } catch (error) {
+            console.log('Profile image upload failed, using default avatar:', error.message);
+        }
 
-        // console.log('image url - ', image);
-
-        // update in DB 
+        // update in DB
         const updatedUserDetails = await User.findByIdAndUpdate(userId,
-            { image: image.secure_url },
+            { image: imageUrl },
             { new: true }
         )
             .populate({

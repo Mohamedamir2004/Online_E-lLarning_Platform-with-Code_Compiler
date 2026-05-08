@@ -4,8 +4,7 @@ import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai"
 import { useDispatch } from "react-redux"
 import { useNavigate } from "react-router-dom"
 
-import { sendOtp } from "../../../services/operations/authAPI"
-import { setSignupData } from "../../../slices/authSlice"
+import { signUp } from "../../../services/operations/authAPI"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
 import Tab from "../../common/Tab"
 
@@ -24,12 +23,13 @@ function SignupForm() {
     email: "",
     password: "",
     confirmPassword: "",
+    contactNumber: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { firstName, lastName, email, password, confirmPassword } = formData;
+  const { firstName, lastName, email, password, confirmPassword, contactNumber } = formData;
 
   // Handle input fields, when some value changes
   const handleOnChange = (e) => {
@@ -49,16 +49,17 @@ function SignupForm() {
       toast.error("Passwords Do Not Match")
       return;
     }
-    const signupData = {
-      ...formData,
-      accountType,
-    };
 
-    // Setting signup data to state
-    // To be used after otp verification
-    dispatch(setSignupData(signupData));
-    // Send OTP to user for verification
-    dispatch(sendOtp(formData.email, navigate));
+    // Send signup data directly
+    dispatch(signUp(
+      accountType,
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+      navigate
+    ));
 
     // Reset form data
     setFormData({
@@ -67,6 +68,7 @@ function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      contactNumber: "",
     })
     setAccountType(ACCOUNT_TYPE.STUDENT);
   };

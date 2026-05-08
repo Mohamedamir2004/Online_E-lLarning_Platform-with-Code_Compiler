@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "react-hot-toast"
 import { HiOutlineCurrencyRupee } from "react-icons/hi"
-import { MdNavigateNext } from "react-icons/md"
+import { MdNavigateNext, MdOutlineDelete } from "react-icons/md"
 import { useDispatch, useSelector } from "react-redux"
 
-import { addCourseDetails, editCourseDetails, fetchCourseCategories } from "../../../../../services/operations/courseDetailsAPI"
+import { addCourseDetails, editCourseDetails, fetchCourseCategories, createCourseCategory, deleteCourseCategory } from "../../../../../services/operations/courseDetailsAPI"
 import { setCourse, setStep } from "../../../../../slices/courseSlice"
 import { COURSE_STATUS } from "../../../../../utils/constants"
 import IconBtn from "../../../../common/IconBtn"
@@ -22,17 +22,39 @@ export default function CourseInformationForm() {
   const { course, editCourse } = useSelector((state) => state.course)
   const [loading, setLoading] = useState(false)
   const [courseCategories, setCourseCategories] = useState([])
+  const panelRef = useRef(null);
+  const toggleRef = useRef(null);
+
+  // new category fields
+  const [showNewCategoryForm, setShowNewCategoryForm] = useState(false)
+  const [newCatName, setNewCatName] = useState("")
+  const [newCatDesc, setNewCatDesc] = useState("")
+  const [showManagePanel, setShowManagePanel] = useState(false)
+
+  const { user } = useSelector((state) => state.profile); // for permission check
 
   useEffect(() => {
     const getCategories = async () => {
       setLoading(true)
       const categories = await fetchCourseCategories();
-      if (categories.length > 0) {
-        // console.log("categories", categories)
-        setCourseCategories(categories)
-      }
+      // Always set categories, even if empty
+      setCourseCategories(categories)
       setLoading(false)
     }
+    // close panel when click outside
+    const handleClickOutside = (e) => {
+      if (
+        showManagePanel &&
+        panelRef.current &&
+        !panelRef.current.contains(e.target) &&
+        toggleRef.current &&
+        !toggleRef.current.contains(e.target)
+      ) {
+        setShowManagePanel(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+
     // if form is in edit mode 
     // It will add value in input field
     if (editCourse) {
@@ -48,7 +70,8 @@ export default function CourseInformationForm() {
     }
 
     getCategories()
-  }, [])
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [editCourse])
 
 
 
@@ -71,6 +94,12 @@ export default function CourseInformationForm() {
 
   //   handle next button click
   const onSubmit = async (data) => {
+    // Debug authentication
+    console.log("Token:", token)
+    if (!token) {
+      toast.error("Please login first")
+      return
+    }
     // console.log(data)
 
     if (editCourse) {
@@ -213,30 +242,130 @@ export default function CourseInformationForm() {
       </div>
 
       {/* Course Category */}
-      <div className="flex flex-col space-y-2 ">
+      <div className="relative flex flex-col space-y-2">
         <label className="text-sm text-richblack-5" htmlFor="courseCategory">
           Course Category <sup className="text-pink-200">*</sup>
         </label>
-        <select
-          {...register("courseCategory", { required: true })}
-          defaultValue=""
-          id="courseCategory"
-          className="form-style w-full cursor-pointer"
-        >
-          <option value="" disabled>
-            Choose a Category
-          </option>
-          {!loading &&
-            courseCategories?.map((category, indx) => (
-              <option key={indx} value={category?._id}>
-                {category?.name}
-              </option>
-            ))}
-        </select>
+        {/* row: select + add button + delete icon */}
+        <div className="flex items-center gap-2">
+          <select
+            {...register("courseCategory", { required: true })}
+            defaultValue=""
+            id="courseCategory"
+            className="form-style flex-1 cursor-pointer"
+          >
+            <option value="" disabled>
+              Choose a Category
+            </option>
+            {!loading &&
+              courseCategories?.map((category, indx) => (
+                <option key={indx} value={category?._id}>
+                  {category?.name}
+                </option>
+              ))}
+          </select>
+
+          <button
+            type="button"
+            className="text-xs text-yellow-50 bg-richblack-700 px-2 py-1 rounded-md hover:bg-yellow-50 hover:text-black transition-colors"
+            onClick={() => setShowNewCategoryForm((prev) => !prev)}
+          >
+            <span className="mr-1">+</span> Add
+          </button>
+
+          {(user?.accountType === "Admin" || user?.accountType === "Instructor") && (
+            <button
+              ref={toggleRef}
+              type="button"
+              onClick={() => setShowManagePanel((prev) => !prev)}
+              className="p-1 bg-red-600 rounded hover:bg-red-700 text-white"
+            >
+              <MdOutlineDelete className="text-lg" />
+            </button>
+          )}
+        </div>
         {errors.courseCategory && (
           <span className="ml-2 text-xs tracking-wide text-pink-200">
             Course Category is required
           </span>
+        )}
+
+        {showNewCategoryForm && (
+          <div className="mt-2 flex flex-col gap-2 bg-richblack-800 p-3 rounded-md border border-richblack-600">
+            <input
+              type="text"
+              placeholder="Category name"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              className="form-style w-full"
+            />
+            <textarea
+              rows={2}
+              placeholder="Description"
+              value={newCatDesc}
+              onChange={(e) => setNewCatDesc(e.target.value)}
+              className="form-style w-full"
+            />
+            <button
+              type="button"
+              className="rounded-md bg-yellow-50 px-4 py-2 text-sm font-semibold text-black shadow-md hover:scale-95"
+              onClick={async () => {
+                if (!newCatName || !newCatDesc) {
+                  toast.error("Both name and description are required")
+                  return
+                }
+                setLoading(true)
+                const cat = await createCourseCategory(newCatName, newCatDesc, token)
+                setLoading(false)
+                if (cat) {
+                  // refresh categories list & select new
+                  const fresh = await fetchCourseCategories()
+                  setCourseCategories(fresh)
+                  setValue("courseCategory", cat._id)
+                  setNewCatName("")
+                  setNewCatDesc("")
+                  setShowNewCategoryForm(false)
+                }
+              }}
+            >
+              Create
+            </button>
+          </div>
+        )}
+
+        {/* manage existing categories panel */}
+        {(user?.accountType === "Admin" || user?.accountType === "Instructor") && showManagePanel && (
+          <div ref={panelRef} className="absolute left-0 top-full mt-2 z-20 w-60 max-h-60 overflow-y-auto space-y-1 rounded bg-richblack-700 p-2 shadow-lg border border-richblack-600">
+            {courseCategories?.map((cat) => (
+              <div
+                key={cat._id}
+                className="flex items-center justify-between px-2 py-1 hover:bg-richblack-600 rounded"
+              >
+                <span className="truncate">{cat.name}</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!token) return toast.error("Please login first");
+                    const confirmed = window.confirm("Delete category and its courses?");
+                    if (!confirmed) return;
+                    setLoading(true);
+                    const ok = await deleteCourseCategory(cat._id, token);
+                    setLoading(false);
+                    if (ok) {
+                      const fresh = await fetchCourseCategories();
+                      setCourseCategories(fresh);
+                      if (getValues().courseCategory === cat._id) {
+                        setValue("courseCategory", "");
+                      }
+                    }
+                  }}
+                  className="text-red-400 hover:text-red-600 ml-2"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

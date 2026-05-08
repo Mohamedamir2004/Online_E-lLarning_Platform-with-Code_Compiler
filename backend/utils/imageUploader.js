@@ -13,6 +13,7 @@ exports.uploadImageToCloudinary = async (file, folder, height, quality) => {
     catch (error) {
         console.log("Error while uploading image");
         console.log(error);
+        throw error;
     }
 }
 

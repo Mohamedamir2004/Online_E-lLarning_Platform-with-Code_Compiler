@@ -6,6 +6,7 @@ import { fetchInstructorCourses } from "../../../services/operations/courseDetai
 import { getInstructorData } from "../../../services/operations/profileAPI"
 import InstructorChart from "./InstructorDashboard/InstructorChart"
 import Img from './../../common/Img';
+import MeetIcon from './../../common/MeetIcon';
 
 
 
@@ -20,22 +21,37 @@ export default function Instructor() {
 
   // get Instructor Data
   useEffect(() => {
-    ; (async () => {
+    // only fetch if we actually have a token
+    if (!token) {
+      console.log("Instructor.jsx: no token, skipping API calls")
+      return
+    }
+
+    (async () => {
       setLoading(true)
+      console.log("Instructor.jsx: token provided", token)
       const instructorApiData = await getInstructorData(token)
       const result = await fetchInstructorCourses(token)
       // console.log('INSTRUCTOR_API_RESPONSE.....', instructorApiData)
-      if (instructorApiData.length) setInstructorData(instructorApiData)
+      setInstructorData(instructorApiData || [])
       if (result) {
         setCourses(result)
       }
       setLoading(false)
     })()
-  }, [])
+  }, [token])
 
-  const totalAmount = instructorData?.reduce((acc, curr) => acc + curr.totalAmountGenerated, 0)
+  const totalAmount = (instructorData && instructorData.length>0 ? instructorData : courses.map(c=>({
+    ...c,
+    totalStudentsEnrolled: c.studentsEnrolled.length,
+    totalAmountGenerated: c.studentsEnrolled.length * c.price
+  }))).reduce((acc, curr) => acc + curr.totalAmountGenerated, 0)
 
-  const totalStudents = instructorData?.reduce((acc, curr) => acc + curr.totalStudentsEnrolled, 0)
+  const totalStudents = (instructorData && instructorData.length>0 ? instructorData : courses.map(c=>({
+    ...c,
+    totalStudentsEnrolled: c.studentsEnrolled.length,
+    totalAmountGenerated: c.studentsEnrolled.length * c.price
+  }))).reduce((acc, curr) => acc + curr.totalStudentsEnrolled, 0)
 
 
   // skeleton loading
@@ -82,13 +98,18 @@ export default function Instructor() {
 
   return (
     <div>
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-richblack-5 text-center sm:text-left">
-          Hii {user?.firstName} 👋
-        </h1>
-        <p className="font-medium text-richblack-200 text-center sm:text-left">
-          Let's start something new
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-richblack-5 text-center sm:text-left">
+            Hii {user?.firstName} 👋
+          </h1>
+          <p className="font-medium text-richblack-200 text-center sm:text-left">
+            Let`s start something new
+          </p>
+        </div>
+        <div className="ml-4">
+          <MeetIcon />
+        </div>
       </div>
 
 
@@ -100,10 +121,15 @@ export default function Instructor() {
         :
         courses.length > 0 ? (
           <div>
-            <div className="my-4 flex h-[450px] space-x-4">
+            <div className="my-4 flex flex-col lg:flex-row gap-4 lg:h-[450px]">
               {/* Render chart / graph */}
-              {totalAmount > 0 || totalStudents > 0 ? (
-                <InstructorChart courses={instructorData} />
+              {/* render chart container any time there is at least one course */}
+              {courses.length > 0 ? (
+                <InstructorChart courses={instructorData && instructorData.length>0 ? instructorData : courses.map(c=>({
+                  ...c,
+                  totalStudentsEnrolled: c.studentsEnrolled.length,
+                  totalAmountGenerated: c.studentsEnrolled.length * c.price
+                }))} />
               ) : (
                 <div className="flex-1 rounded-md bg-richblack-800 p-6">
                   <p className="text-lg font-bold text-richblack-5">Visualize</p>
@@ -113,26 +139,25 @@ export default function Instructor() {
                 </div>
               )}
 
-              {/* left column */}
-              {/* Total Statistics */}
-              <div className="flex min-w-[250px] flex-col rounded-md bg-richblack-800 p-6">
+              {/* Statistics */}
+              <div className="flex w-full lg:min-w-[250px] lg:max-w-[250px] flex-col rounded-md bg-richblack-800 p-4 lg:p-6">
                 <p className="text-lg font-bold text-richblack-5">Statistics</p>
                 <div className="mt-4 space-y-4">
                   <div>
-                    <p className="text-lg text-richblack-200">Total Courses</p>
-                    <p className="text-3xl font-semibold text-richblack-50">
+                    <p className="text-sm lg:text-lg text-richblack-200">Total Courses</p>
+                    <p className="text-2xl lg:text-3xl font-semibold text-richblack-50">
                       {courses.length}
                     </p>
                   </div>
                   <div>
-                    <p className="text-lg text-richblack-200">Total Students</p>
-                    <p className="text-3xl font-semibold text-richblack-50">
+                    <p className="text-sm lg:text-lg text-richblack-200">Total Students</p>
+                    <p className="text-2xl lg:text-3xl font-semibold text-richblack-50">
                       {totalStudents}
                     </p>
                   </div>
                   <div>
-                    <p className="text-lg text-richblack-200">Total Income</p>
-                    <p className="text-3xl font-semibold text-richblack-50">
+                    <p className="text-sm lg:text-lg text-richblack-200">Total Income</p>
+                    <p className="text-2xl lg:text-3xl font-semibold text-richblack-50">
                       Rs. {totalAmount}
                     </p>
                   </div>

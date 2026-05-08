@@ -207,7 +207,9 @@ function CourseDetails() {
                 <span>{`(${ratingAndReviews.length} reviews)`}</span>
                 <span>{`${studentsEnrolled.length} students enrolled`}</span>
               </div>
-              <p className="capitalize "> Created By <span className="font-semibold underline">{instructor.firstName} {instructor.lastName}</span></p>
+              {instructor && (
+                <p className="capitalize "> Created By <span className="font-semibold underline">{instructor?.firstName || ""} {instructor?.lastName || ""}</span></p>
+              )}
               <div className="flex flex-wrap gap-5 text-lg">
                 <p className="flex items-center gap-2">
                   {" "}
@@ -303,22 +305,24 @@ function CourseDetails() {
             </div>
 
             {/* Author Details */}
-            <div className="mb-12 py-4">
-              <p className="text-[28px] font-semibold">Author</p>
-              <div className="flex items-center gap-4 py-4">
-                <Img
-                  src={instructor.image}
-                  alt="Author"
-                  className="h-14 w-14 rounded-full object-cover"
-                />
-                <div>
-                  <p className="text-lg capitalize flex items-center gap-2 font-semibold">{`${instructor.firstName} ${instructor.lastName}`}
-                    <span><MdOutlineVerified className='w-5 h-5 text-[#00BFFF]' /></span>
-                  </p>
-                  <p className="text-richblack-50">{instructor?.additionalDetails?.about}</p>
+            {instructor && (
+              <div className="mb-12 py-4">
+                <p className="text-[28px] font-semibold">Author</p>
+                <div className="flex items-center gap-4 py-4">
+                  <Img
+                    src={instructor?.image}
+                    alt="Author"
+                    className="h-14 w-14 rounded-full object-cover"
+                  />
+                  <div>
+                    <p className="text-lg capitalize flex items-center gap-2 font-semibold">{`${instructor?.firstName || ""} ${instructor?.lastName || ""}`}
+                      <span><MdOutlineVerified className='w-5 h-5 text-[#00BFFF]' /></span>
+                    </p>
+                    <p className="text-richblack-50">{instructor?.additionalDetails?.about}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

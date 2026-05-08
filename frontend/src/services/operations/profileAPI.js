@@ -57,6 +57,10 @@ export async function getUserEnrolledCourses(token) {
 
 // ================ get Instructor Data  ================
 export async function getInstructorData(token) {
+  if (!token) {
+    console.log("getInstructorData: no token provided")
+    return []
+  }
   // const toastId = toast.loading("Loading...")
   let result = []
   try {

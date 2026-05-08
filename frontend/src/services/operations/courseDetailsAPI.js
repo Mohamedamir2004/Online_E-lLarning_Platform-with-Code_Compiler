@@ -1,9 +1,7 @@
 import { toast } from "react-hot-toast"
-
-import { updateCompletedLectures } from "../../slices/viewCourseSlice"
 // import { setLoading } from "../../slices/profileSlice";
 import { apiConnector } from "../apiConnector"
-import { courseEndpoints } from "../apis"
+import { courseEndpoints, quizEndpoints } from "../apis"
 
 const {
   COURSE_DETAILS_API,
@@ -20,9 +18,19 @@ const {
   GET_ALL_INSTRUCTOR_COURSES_API,
   DELETE_COURSE_API,
   GET_FULL_COURSE_DETAILS_AUTHENTICATED,
-  CREATE_RATING_API,
   LECTURE_COMPLETION_API,
+  DELETE_CATEGORY_API,
+  CREATE_CATEGORY_API,
+  SEARCH_COURSE_API,
+  CREATE_RATING_API,
 } = courseEndpoints
+
+const {
+  CREATE_QUIZ_API,
+  GET_QUIZZES_FOR_COURSE_API,
+  UPDATE_QUIZ_API,
+  DELETE_QUIZ_API,
+} = quizEndpoints
 
 
 
@@ -86,6 +94,78 @@ export const fetchCourseCategories = async () => {
     toast.error(error.message)
   }
   return result
+}
+
+// ================ create Course Category ================
+export const createCourseCategory = async (name, description, token) => {
+  let result = null
+  const toastId = toast.loading("Creating category...")
+
+  try {
+    const response = await apiConnector(
+      "POST",
+      CREATE_CATEGORY_API,
+      { name, description },
+      {
+        Authorization: `Bearer ${token}`,
+      }
+    )
+    console.log("CREATE_CATEGORY_API RESPONSE", response)
+    if (!response?.data?.success) {
+      throw new Error(response?.data?.message || "Could not create category")
+    }
+    result = response?.data?.data
+    toast.success("Category created successfully")
+  } catch (error) {
+    console.log("CREATE_CATEGORY_API ERROR", error)
+    toast.error(error.message || "Failed to create category")
+  }
+
+  toast.dismiss(toastId)
+  return result
+}
+
+// ================ search Courses ================
+export const searchCourses = async (query) => {
+  let result = []
+  try {
+    const response = await apiConnector(
+      "GET",
+      SEARCH_COURSE_API,
+      null,
+      null,
+      { q: query }
+    )
+    console.log("SEARCH_COURSE_API RESPONSE", response)
+    if (!response?.data?.success) {
+      throw new Error(response?.data?.message || "Search failed")
+    }
+    result = response?.data?.data
+  } catch (error) {
+    console.log("SEARCH_COURSE_API ERROR", error)
+    toast.error(error.message || "Failed to search courses")
+  }
+  return result
+}
+
+// ================ delete Category ================
+export const deleteCourseCategory = async (categoryId, token) => {
+  let success = false
+  try {
+    const response = await apiConnector("DELETE", DELETE_CATEGORY_API, { categoryId }, {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    })
+    console.log("DELETE_CATEGORY_API RESPONSE", response)
+    if (response?.data?.success) {
+      success = true
+      toast.success(response.data.message || "Category deleted")
+    }
+  } catch (error) {
+    console.log("DELETE_CATEGORY_API ERROR", error)
+    toast.error(error.response?.data?.message || error.message || "Failed to delete category")
+  }
+  return success
 }
 
 
@@ -172,23 +252,40 @@ export const createSection = async (data, token) => {
 // ================ create SubSection ================
 export const createSubSection = async (data, token) => {
   let result = null
-  const toastId = toast.loading("Loading...")
+  const toastId = toast.loading("Adding lecture...")
 
   try {
+    console.log("Sending create sub-section request with data:", {
+      sectionId: data.get('sectionId'),
+      title: data.get('title'),
+      description: data.get('description'),
+      video: data.get('video') ? 'Video file present' : 'No video'
+    })
+    
+    // when we send FormData along with custom headers, axios does not
+    // automatically set the content-type (including the boundary). the
+    // backend relies on express-fileupload to parse multipart data, so we
+    // need to explicitly declare it here. forgetting to send the header
+    // results in the request being sent as JSON which strips the file
+    // resulting in `req.files.video` being undefined and a 400 response
+    // from the server complaining about missing fields.
     const response = await apiConnector("POST", CREATE_SUBSECTION_API, data, {
+      "Content-Type": "multipart/form-data",
       Authorization: `Bearer ${token}`,
     })
     console.log("CREATE SUB-SECTION API RESPONSE............", response)
 
     if (!response?.data?.success) {
-      throw new Error("Could Not Add Lecture")
+      throw new Error(response?.data?.message || "Could Not Add Lecture")
     }
 
     result = response?.data?.data
-    toast.success("Lecture Added")
+    toast.success("Lecture Added Successfully")
   } catch (error) {
     console.log("CREATE SUB-SECTION API ERROR............", error)
-    toast.error(error.message)
+    // prefer server-provided message if available
+    const msg = error.response?.data?.message || error.message || "Failed to add lecture"
+    toast.error(msg)
   }
   toast.dismiss(toastId)
   return result
@@ -224,23 +321,29 @@ export const updateSection = async (data, token) => {
 // ================ Update SubSection ================
 export const updateSubSection = async (data, token) => {
   let result = null
-  const toastId = toast.loading("Loading...")
+  const toastId = toast.loading("Updating lecture...")
 
   try {
+    console.log("Sending update sub-section request...")
+    
+    // same reasoning as createSubSection – include content-type when sending
+    // a FormData instance so the file payload is preserved/restored by axios
     const response = await apiConnector("POST", UPDATE_SUBSECTION_API, data, {
+      "Content-Type": "multipart/form-data",
       Authorization: `Bearer ${token}`,
     })
     console.log("UPDATE SUB-SECTION API RESPONSE............", response)
 
     if (!response?.data?.success) {
-      throw new Error("Could Not Update Lecture")
+      throw new Error(response?.data?.message || "Could Not Update Lecture")
     }
 
     result = response?.data?.data
-    toast.success("Lecture Updated")
+    toast.success("Lecture Updated Successfully")
   } catch (error) {
     console.log("UPDATE SUB-SECTION API ERROR............", error)
-    toast.error(error.message)
+    const msg = error.response?.data?.message || error.message || "Failed to update lecture"
+    toast.error(msg)
   }
   toast.dismiss(toastId)
   return result
@@ -417,6 +520,93 @@ export const createRating = async (data, token) => {
   } catch (error) {
     success = false
     console.log("CREATE RATING API ERROR............", error)
+    toast.error(error.message)
+  }
+  toast.dismiss(toastId)
+  return success
+}
+
+// ================ Quiz APIs ================
+
+// Create Quiz
+export const createQuiz = async (data, token) => {
+  const toastId = toast.loading("Creating quiz...")
+  let result = null
+  try {
+    const response = await apiConnector("POST", CREATE_QUIZ_API, data, {
+      Authorization: `Bearer ${token}`,
+    })
+    console.log("CREATE QUIZ API RESPONSE............", response)
+    if (!response?.data?.success) {
+      throw new Error("Could Not Create Quiz")
+    }
+    result = response?.data?.data
+    toast.success("Quiz Created Successfully")
+  } catch (error) {
+    console.log("CREATE QUIZ API ERROR............", error)
+    toast.error(error.message)
+  }
+  toast.dismiss(toastId)
+  return result
+}
+
+// Get Quizzes for Course
+export const getQuizzesForCourse = async (courseId, token) => {
+  let result = []
+  try {
+    const response = await apiConnector("GET", `${GET_QUIZZES_FOR_COURSE_API}/${courseId}`, null, {
+      Authorization: `Bearer ${token}`,
+    })
+    console.log("GET QUIZZES FOR COURSE API RESPONSE............", response)
+    if (!response?.data?.success) {
+      throw new Error("Could Not Fetch Quizzes")
+    }
+    result = response?.data?.data
+  } catch (error) {
+    console.log("GET QUIZZES FOR COURSE API ERROR............", error)
+    toast.error(error.message)
+  }
+  return result
+}
+
+// Update Quiz
+export const updateQuiz = async (quizId, data, token) => {
+  const toastId = toast.loading("Updating quiz...")
+  let result = null
+  try {
+    const response = await apiConnector("PUT", `${UPDATE_QUIZ_API}/${quizId}`, data, {
+      Authorization: `Bearer ${token}`,
+    })
+    console.log("UPDATE QUIZ API RESPONSE............", response)
+    if (!response?.data?.success) {
+      throw new Error("Could Not Update Quiz")
+    }
+    result = response?.data?.data
+    toast.success("Quiz Updated Successfully")
+  } catch (error) {
+    console.log("UPDATE QUIZ API ERROR............", error)
+    toast.error(error.message)
+  }
+  toast.dismiss(toastId)
+  return result
+}
+
+// Delete Quiz
+export const deleteQuiz = async (quizId, token) => {
+  const toastId = toast.loading("Deleting quiz...")
+  let success = false
+  try {
+    const response = await apiConnector("DELETE", `${DELETE_QUIZ_API}/${quizId}`, null, {
+      Authorization: `Bearer ${token}`,
+    })
+    console.log("DELETE QUIZ API RESPONSE............", response)
+    if (!response?.data?.success) {
+      throw new Error("Could Not Delete Quiz")
+    }
+    toast.success("Quiz Deleted Successfully")
+    success = true
+  } catch (error) {
+    console.log("DELETE QUIZ API ERROR............", error)
     toast.error(error.message)
   }
   toast.dismiss(toastId)
